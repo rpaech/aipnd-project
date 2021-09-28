@@ -105,3 +105,4 @@ ENV/
 .DS_Store
 /flowers
 /flower_data
+*.pth
