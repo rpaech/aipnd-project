@@ -28,8 +28,33 @@ Example:
 """
 
 
+import argparse
+import pathlib
+
+
+def get_input_args():
+    args = argparse.ArgumentParser(
+        description='Predicts the category of a flower shown in an image.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    args.add_argument('image_path', type=pathlib.Path,
+        help='The path to an image file.')
+    args.add_argument('checkpoint', type=pathlib.Path,
+        help='The path to a model checkpoint file created using the train.py script.')
+    args.add_argument('--top_k', type=int, default=1,
+        help='Return the top <number> most likely categories.')
+    args.add_argument('--category_names', type=pathlib.Path,
+        help='The path to a JSON file mapping a flower category to its name.')
+    args.add_argument('--gpu', action="store_true",
+        help='Use the GPU for training, if available.')
+
+    return args.parse_args()
+
+
 def main():
-    pass
+    args = get_input_args()
+    print(args)
+
 
 if __name__ == '__main__':
     main()
