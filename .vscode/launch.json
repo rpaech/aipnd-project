@@ -12,10 +12,10 @@
             "args": [
                 "flowers", 
                 "--save_dir", "checkpoints",
-                "--arch", "resnet", 
-                "--learning_rate", "0.003",
+                "--arch", "densenet", 
+                "--learning_rate", "0.05",
                 "--hidden_units", "256",
-                "--epochs", "1",
+                "--epochs", "3",
                 "--gpu"],
             "console": "integratedTerminal"
         },
@@ -41,8 +41,8 @@
             "program": "predict.py",
             "args": [
                 "flowers/valid/96/image_07670.jpg", 
-                "checkpoints/densenet_0939.pth",
-                "--top_k", "5", 
+                "checkpoints/densenet_h256_e15_a94.pth",
+                "--top_k", "1", 
                 "--category_names", "cat_to_name.json",
                 "--gpu"],
             "console": "integratedTerminal"
@@ -54,7 +54,7 @@
             "program": "predict.py",
             "args": [
                 "flowers/valid/8/image_03313.jpg", 
-                "checkpoints/densenet_0939.pth",
+                "checkpoints/densenet_h256_e15_a94.pth",
                 "--top_k", "5", 
                 "--category_names", "cat_to_name.json",
                 "--gpu"],

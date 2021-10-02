@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torchvision import transforms, models
+from pathlib import Path
 
 
 CPU_DEVICE = 'cpu'
@@ -14,27 +15,28 @@ CPL_HIDDEN_UNITS = 'hidden_units'
 FLOWER_CAT_COUNT = 102
 
 ARCH_DENSNET = 'densenet'
-ARCH_RESNET = 'resnet'
-ARCH_VGG = 'vgg'
-
 ARCH_DENSNET_SIZE = 1024
+ARCH_RESNET = 'resnet'
 ARCH_RESNET_SIZE = 2048
+ARCH_VGG = 'vgg'
 ARCH_VGG_SIZE = 4096
 
+TRNG_DROP_RATE = 0.2
 
-NORMALISE_TRANSFORM = transforms.Normalize([0.485, 0.456, 0.406],
+
+normalise_transform = transforms.Normalize([0.485, 0.456, 0.406],
                                            [0.229, 0.224, 0.225])
 
-TRNG_TRANSFORM = transforms.Compose([transforms.RandomRotation(30),
+trng_transform = transforms.Compose([transforms.RandomRotation(30),
                                      transforms.RandomResizedCrop(224),
                                      transforms.RandomHorizontalFlip(),
                                      transforms.ToTensor(),
-                                     NORMALISE_TRANSFORM])
+                                     normalise_transform])
 
-PRED_TRANSFORM = transforms.Compose([transforms.Resize(255),
+pred_transform = transforms.Compose([transforms.Resize(255),
                                      transforms.CenterCrop(224),
                                      transforms.ToTensor(),
-                                     NORMALISE_TRANSFORM])
+                                     normalise_transform])
 
 
 class FlowerNetModule():
@@ -58,19 +60,19 @@ def get_device(on_gpu=False):
 
 
 def create(arch, hidden_units, idx_to_cat):
-    if arch == ARCH_DENSNET:
-        create_func = create_densenet
-    elif arch == ARCH_RESNET:
-        create_func = create_resnet
-    elif arch == ARCH_VGG:
-        create_func = create_vgg
-    else:
+    
+    create_funcs = {ARCH_DENSNET: create_densenet,
+                    ARCH_RESNET: create_resnet,
+                    ARCH_VGG: create_vgg}
+
+    if arch not in create_funcs:
         raise Exception("Unknown architecture '{}'.".format(arch))
 
-    return create_func(hidden_units, idx_to_cat)
+    return create_funcs[arch](hidden_units, idx_to_cat)
 
 
 def load(path):
+    
     checkpoint = torch.load(path, map_location=CPU_DEVICE)
 
     arch = checkpoint[CPL_ARCH]
@@ -84,6 +86,7 @@ def load(path):
 
 
 def save(fnm, path):
+    
     checkpoint = {CPL_ARCH: fnm.arch,
                   CPL_HIDDEN_UNITS: fnm.hidden_units,
                   CPL_MODEL_STATE: fnm.model.state_dict(),
@@ -93,54 +96,48 @@ def save(fnm, path):
 
 
 def create_densenet(hidden_units, idx_to_cat):
+    
     model = models.densenet121(pretrained=True)
 
     for param in model.parameters():
         param.requires_grad = False
 
-    model.classifier = nn.Sequential(nn.Linear(ARCH_DENSNET_SIZE,
-                                               hidden_units),
-                                     nn.ReLU(),
-                                     nn.Dropout(0.2),
-                                     nn.Linear(hidden_units,
-                                               FLOWER_CAT_COUNT),
-                                     nn.LogSoftmax(dim=1))
-
+    model.classifier = create_classifier(ARCH_DENSNET_SIZE, hidden_units)
+    
     return FlowerNetModule(ARCH_DENSNET, model, model.classifier,
                            hidden_units, idx_to_cat)
 
 
 def create_resnet(hidden_units, idx_to_cat):
+    
     model = models.resnet101(pretrained=True)
 
     for param in model.parameters():
         param.requires_grad = False
 
-    model.fc = nn.Sequential(nn.Linear(ARCH_RESNET_SIZE,
-                                       hidden_units),
-                             nn.ReLU(),
-                             nn.Dropout(0.2),
-                             nn.Linear(hidden_units,
-                                       FLOWER_CAT_COUNT),
-                             nn.LogSoftmax(dim=1))
+    model.fc = create_classifier(ARCH_RESNET_SIZE, hidden_units)
 
     return FlowerNetModule(ARCH_RESNET, model, model.fc,
                            hidden_units, idx_to_cat)
 
 
 def create_vgg(hidden_units, idx_to_cat):
+    
     model = models.vgg11(pretrained=True)
 
     for param in model.parameters():
         param.requires_grad = False
 
-    model.classifier = nn.Sequential(nn.Linear(ARCH_VGG_SIZE,
-                                               hidden_units),
-                                     nn.ReLU(),
-                                     nn.Dropout(0.2),
-                                     nn.Linear(hidden_units,
-                                               FLOWER_CAT_COUNT),
-                                     nn.LogSoftmax(dim=1))
+    model.classifier[-1] = create_classifier(ARCH_VGG_SIZE, hidden_units)
 
     return FlowerNetModule(ARCH_VGG, model, model.classifier,
                            hidden_units, idx_to_cat)
+
+
+def create_classifier(arch_units, hidden_units):
+    
+    return nn.Sequential(nn.Linear(arch_units, hidden_units),
+                         nn.ReLU(),
+                         nn.Dropout(TRNG_DROP_RATE),
+                         nn.Linear(hidden_units, FLOWER_CAT_COUNT),
+                         nn.LogSoftmax(dim=1))
