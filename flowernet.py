@@ -60,7 +60,7 @@ def get_device(on_gpu=False):
 
 
 def create(arch, hidden_units, idx_to_cat):
-    
+
     create_funcs = {ARCH_DENSNET: create_densenet,
                     ARCH_RESNET: create_resnet,
                     ARCH_VGG: create_vgg}
@@ -72,7 +72,7 @@ def create(arch, hidden_units, idx_to_cat):
 
 
 def load(path):
-    
+
     checkpoint = torch.load(path, map_location=CPU_DEVICE)
 
     arch = checkpoint[CPL_ARCH]
@@ -86,7 +86,7 @@ def load(path):
 
 
 def save(fnm, path):
-    
+
     checkpoint = {CPL_ARCH: fnm.arch,
                   CPL_HIDDEN_UNITS: fnm.hidden_units,
                   CPL_MODEL_STATE: fnm.model.state_dict(),
@@ -96,46 +96,49 @@ def save(fnm, path):
 
 
 def create_densenet(hidden_units, idx_to_cat):
-    
+
     model = models.densenet121(pretrained=True)
 
     for param in model.parameters():
         param.requires_grad = False
 
-    model.classifier = create_classifier(ARCH_DENSNET_SIZE, hidden_units)
-    
-    return FlowerNetModule(ARCH_DENSNET, model, model.classifier,
-                           hidden_units, idx_to_cat)
+    classifier = create_classifier(ARCH_DENSNET_SIZE, hidden_units)
+    model.classifier = classifier
+
+    return FlowerNetModule(ARCH_DENSNET, model, classifier, hidden_units,
+                           idx_to_cat)
 
 
 def create_resnet(hidden_units, idx_to_cat):
-    
+
     model = models.resnet101(pretrained=True)
 
     for param in model.parameters():
         param.requires_grad = False
 
-    model.fc = create_classifier(ARCH_RESNET_SIZE, hidden_units)
+    classifier = create_classifier(ARCH_RESNET_SIZE, hidden_units)
+    model.fc = classifier
 
-    return FlowerNetModule(ARCH_RESNET, model, model.fc,
-                           hidden_units, idx_to_cat)
+    return FlowerNetModule(ARCH_RESNET, model, classifier, hidden_units,
+                           idx_to_cat)
 
 
 def create_vgg(hidden_units, idx_to_cat):
-    
+
     model = models.vgg11(pretrained=True)
 
     for param in model.parameters():
         param.requires_grad = False
 
-    model.classifier[-1] = create_classifier(ARCH_VGG_SIZE, hidden_units)
+    classifier = create_classifier(ARCH_VGG_SIZE, hidden_units)
+    model.classifier[-1] = classifier
 
-    return FlowerNetModule(ARCH_VGG, model, model.classifier,
-                           hidden_units, idx_to_cat)
+    return FlowerNetModule(ARCH_VGG, model, classifier, hidden_units,
+                           idx_to_cat)
 
 
 def create_classifier(arch_units, hidden_units):
-    
+
     return nn.Sequential(nn.Linear(arch_units, hidden_units),
                          nn.ReLU(),
                          nn.Dropout(TRNG_DROP_RATE),
