@@ -30,6 +30,10 @@ Example:
 
 import argparse
 import pathlib
+import json
+import torch
+import flower_net as fn
+from PIL import Image
 
 
 def get_input_args():
@@ -51,9 +55,43 @@ def get_input_args():
     return args.parse_args()
 
 
+def load_image(image_path):
+    with Image.open(image_path) as im:
+        return fn.PRED_TRANSFORM(im)
+
+
+def load_cat_to_name(path):
+    with open(path, 'r') as file:
+        return json.load(file)
+
+
+def predict(fnm, image, topk, on_gpu):
+    device = fn.get_device(on_gpu)
+    
+    fnm.model.to(device)
+    fnm.model.eval()
+    with torch.no_grad():
+        pred_results = torch.exp(fnm.model(image.unsqueeze(dim=0).to(device)))
+
+    top_probs, top_results = pred_results.topk(topk, dim=1)
+
+    top_probs = top_probs.squeeze_().tolist()
+    top_cats = [fnm.idx_to_cat[x.item()] for x in top_results.squeeze_()]
+
+    return top_probs, top_cats
+
+
 def main():
     args = get_input_args()
-    print(args)
+    
+    image = load_image(str(args.image_path))
+    fnm = fn.load(args.checkpoint)
+    cat_to_name = load_cat_to_name(args.category_names)
+    
+    top_probs, top_cats = predict(fnm, image, args.top_k, args.gpu)
+
+    for cat, prob in zip(top_cats, top_probs):
+        print('{} ({:.3f}%)'.format(cat_to_name[cat], prob * 100))
 
 
 if __name__ == '__main__':
