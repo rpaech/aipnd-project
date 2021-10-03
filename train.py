@@ -33,11 +33,21 @@ Example:
     $ python train.py flowers --save_dir checkpoints --arch "densenet"
     --learning_rate 0.0005 --hidden_units 256 --epochs 15 --gpu
 
+    Parameters for training...
+    Architecture: densenet
+    Hidden units: 256
+    Learning rate: 0.0005
+    Epochs: 15
+
+    Training model...
     Epoch: 1/15  Trng loss: 0.06174  Valn loss: 0.04596  Acc: 0.468  Dur: 53.9s
     Epoch: 2/15  Trng loss: 0.03889  Valn loss: 0.02523  Acc: 0.707  Dur: 53.1s
     Epoch: 3/15  Trng loss: 0.02599  Valn loss: 0.01608  Acc: 0.809  Dur: 53.2s
     ...
     Epoch: 15/15  Trng loss: 0.00788  Valn loss: 0.00412  Acc: 0.935  Dur: 53.3s
+    
+    Training complete.
+    Model saved to 'checkpoints\densenet_h256_e15_a94.pth'.
 """
 
 
@@ -57,7 +67,15 @@ CHKP_FILE_EXT = "pth"
 
 
 def get_input_args():
-
+    """Parse and return the input arguments to the script.
+    
+    Checks the paths provided to the input arguments and, if they don't exist an
+    exception will be raised.
+    
+    Returns:
+        argparse.Namespace
+    """
+    
     argp = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="""Trains a new neural network to identify different
@@ -96,11 +114,32 @@ def get_input_args():
 
 
 def create_idx_to_cat(cat_to_idx):
+    """Reverse the mapping of a cat_to_idx dictionary so that the internal index
+    numbers provided by the classifier can be mapped to the actual flower 
+    category labels.
+    
+    Args:
+        cat_to_idx:  Dictionary mapping flower categories to classifier indexes.
+    returns
+        Dictionary mapping classifier indexes to flower categories.
+    """
 
     return {val: key for key, val in cat_to_idx.items()}
 
 
 def create_dataloaders(data_dir):
+    """Create the training and validation dataloaders.
+    
+    The data files must be structured as per the generic data loader for the 
+    torchvision.datasets.ImageFolder class.
+    
+    Args:
+        data_dir:  A pathlib.Path object containing the location of the 
+            data files.
+    Returns
+        trng_dataloader:  A torch.utils.data.DataLoader
+        valn_dataloader:  A torch.utils.data.DataLoader
+    """
 
     trng_dataset = datasets.ImageFolder(data_dir / TRNG_FOLDER,
                                         transform=flowernet.trng_transform)
@@ -119,6 +158,21 @@ def create_dataloaders(data_dir):
 
 def train(fnm, trng_dataloader, valn_dataloader, max_epochs, learning_rate,
           on_gpu):
+    """Train a flowernet model.
+    
+    Args:
+        fnm:  A FlowerNetModule to train.
+        trng_dataloader:  A torch.utils.data.DataLoader containing the 
+            training dataset.
+        valn_dataloader:  A torch.utils.data.DataLoader containing the
+            validation dataset.
+        max_epochs:  The number of epochs to run the training.
+        learning_rate:  The learning rate used to train the network.
+        on_gpu:  If True, use an available GPU for training.
+    Returns:
+        accuracy:  The final accuracy of model, based on evaluation against the
+            validation dataset.
+    """
 
     device = flowernet.get_device(on_gpu)
 
@@ -158,7 +212,7 @@ def train(fnm, trng_dataloader, valn_dataloader, max_epochs, learning_rate,
                 total_valn_loss += loss.item()
 
                 predicted_results = torch.exp(log_pred_results)
-                top_probs, top_results = predicted_results.topk(1, dim=1)
+                _, top_results = predicted_results.topk(1, dim=1)
                 correct_results = top_results == exp_results.view(
                     *top_results.shape)
                 total_correct += correct_results.sum().item()
@@ -182,12 +236,29 @@ def train(fnm, trng_dataloader, valn_dataloader, max_epochs, learning_rate,
 
 
 def main():
+    """Main function.
+    
+    Performs the following steps:
+    1. Load the input arguments
+    2. Create the dataloaders and a new untrained flowernet model.
+    3. Trains the model
+    4. Saves the model to a checkpoint file.
+    """
 
     args = get_input_args()
 
     trng_dataloader, valn_dataloader = create_dataloaders(args.data_path)
     idx_to_cat = create_idx_to_cat(trng_dataloader.dataset.class_to_idx)
     fnm = flowernet.create(args.arch, args.hidden_units, idx_to_cat)
+
+    print()
+    print("Parameters for training...")
+    print("Architecture: {}".format(args.arch))
+    print("Hidden units: {}".format(args.hidden_units))
+    print("Learning rate: {}".format(args.learning_rate))
+    print("Epochs: {}".format(args.epochs))
+    print()
+    print("Training model...")
 
     accuracy = train(fnm, trng_dataloader, valn_dataloader, args.epochs,
                      args.learning_rate, args.gpu)
@@ -199,6 +270,11 @@ def main():
                                                       CHKP_FILE_EXT)
     chkp_file_path = args.save_dir / chkp_file_name
     flowernet.save(fnm, chkp_file_path)
+    
+    print()
+    print("Training complete.")
+    print("Model saved to '{}'.".format(chkp_file_path))
+    print()
 
 
 if __name__ == '__main__':
