@@ -46,6 +46,9 @@ from PIL import Image
 from pathlib import Path
 
 
+DEFAULT_TOPK = 3
+
+
 def get_input_args():
     """Parse and return the input arguments to the script.
     
@@ -65,7 +68,8 @@ def get_input_args():
     argp.add_argument('checkpoint', type=Path,
                       help="""The path to a model checkpoint file created using
                               the train.py script.""")
-    argp.add_argument('--top_k', type=int, default=1,
+    argp.add_argument('--top_k', type=int, 
+                      default=DEFAULT_TOPK,
                       help="""Return the top <number> most likely
                               categories.""")
     argp.add_argument('--category_names', type=Path,

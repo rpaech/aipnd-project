@@ -63,7 +63,13 @@ import flowernet
 
 TRNG_FOLDER = 'train'
 VALN_FOLDER = 'valid'
-CHKP_FILE_EXT = "pth"
+CHKP_FILE_EXT = 'pth'
+
+DEFAULT_ARCH = 'densenet'
+DEFAULT_LEARNING_RATE = 0.0005
+DEFAULT_HIDDEN_UNITS = 256
+DEFAULT_EPOCHS = 15
+DEFAULT_SAVE_DIR = '.'
 
 
 def get_input_args():
@@ -84,19 +90,23 @@ def get_input_args():
     argp.add_argument('data_path', type=Path,
                       help="""The directory path where the training and
                               validation data is located.""")
-    argp.add_argument('--save_dir', type=Path, default='.',
+    argp.add_argument('--save_dir', type=Path, 
+                      default=DEFAULT_SAVE_DIR,
                       help="""The directory to save the model checkpoint
                               files.""")
     argp.add_argument('--arch', choices=['densenet', 'resnet', 'vgg'],
-                      default='densenet',
+                      default=DEFAULT_ARCH,
                       help="""The feature model to use for transfer
                               learning.""")
-    argp.add_argument('--learning_rate', type=float, default=0.03,
+    argp.add_argument('--learning_rate', type=float, 
+                      default=DEFAULT_LEARNING_RATE,
                       help="""The learning rate used to train the network.""")
-    argp.add_argument('--hidden_units', type=int, default=256,
+    argp.add_argument('--hidden_units', type=int, 
+                      default=DEFAULT_HIDDEN_UNITS,
                       help="""The number of nodes in the hidden layer of the
                               classifier.""")
-    argp.add_argument('--epochs', type=int, default=15,
+    argp.add_argument('--epochs', type=int, 
+                      default=DEFAULT_EPOCHS,
                       help="""The number of epochs to run the training.""")
     argp.add_argument('--gpu', action="store_true",
                       help="""Use the GPU for training, if available.""")
